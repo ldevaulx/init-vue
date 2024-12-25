@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    ## wifi-v5-portail-accor
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: init-vue
+    app.kubernetes.io/component: init-vue
+spec:
+  replicas: {{ .Values.Deployment.Replica }}
+  revisionHistoryLimit: 0
+  strategy:
+    type: {{ .Values.Deployment.Strategy }}
+  selector:
+    matchLabels:
+      pod: {{ .Release.Name }}
+  template:
+    # A partir d'ici, c'est une définition de pod
+    metadata:
+      labels:
+        pod: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ .Release.Name }}
+        app.kubernetes.io/part-of: wifipass
+        app.kubernetes.io/component: portail
+    spec:
+      containers:
+        - name: {{ .Release.Name }}
+          image: "{{ .Values.Deployment.Image.repository }}:{{ .Values.Deployment.Image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          {{ if .Values.Deployment.Resources.Enable }}
+          resources:
+            requests:
+              cpu: {{ .Values.Deployment.Resources.Requests.Cpu }}
+              memory: {{ .Values.Deployment.Resources.Requests.Memory }}
+            limits:
+              {{ if .Values.Deployment.Resources.Limits.Cpu }}
+              cpu: {{ .Values.Deployment.Resources.Limits.Cpu }}
+              {{ end }}
+              memory: {{ .Values.Deployment.Resources.Limits.Memory }}
+          {{ end }}
+          {{ if .Values.Deployment.Monitoring }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          {{ end }}
+          volumeMounts:
+            {{ if .Values.Nfs.MountSource }}
+            - name: {{ .Release.Name }}-source
+              mountPath: /work
+              subPath: {{ .Values.Nfs.Path }}
+            - name: {{ .Release.Name }}-source
+              mountPath: /common
+              subPath: {{ .Values.Nfs.PathCommon }}
+            {{ end }}
+            - name: {{ .Release.Name }}-nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: "nginx.conf"
+              readOnly: true
+            - name: {{ .Release.Name }}-config-env
+              mountPath: {{ .Values.ConfigEnv.Path }}
+              subPath: "config.js"
+      volumes:
+        {{ if .Values.Nfs.MountSource }}
+        - name: {{ .Release.Name }}-source
+          nfs:
+            server: {{ .Values.Nfs.Server }}
+            path: {{ .Values.Nfs.Export }}
+        {{ end }}
+        - name: {{ .Release.Name }}-nginx-conf
+          configMap:
+            name: {{ .Release.Name }}-nginx-conf
+        - name: {{ .Release.Name }}-config-env
+          configMap:
+            name: {{ .Release.Name }}-config-env

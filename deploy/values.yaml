@@ -1,0 +1,56 @@
+## Déploiement portail générique
+##
+## Fichier de values pour déploiement PROD
+## Pour les autres déploiements (dev, staging) se référer à leur fichier de values respectif
+
+Deployment:
+  Replica: 1
+  Strategy: RollingUpdate
+  Image:
+    repository: "444963888884.dkr.ecr.eu-west-3.amazonaws.com/prod/wifi-v5-portail-accor"
+    tag: "2023-07-18_13h36"
+  Monitoring: true
+  Env:
+    plain:
+      VUE_APP_I18N_LOCALE: "fr"
+      VUE_APP_I18N_FALLBACK_LOCALE: "fr"
+      VUE_APP_API_URL: "https://www.dc-wifi.tech/api/public/"
+      VUE_APP_PING_URL: "http://1wifi.info"
+      VUE_APP_SENTRY_DSN: "https://e9b738e8120045d69051199f5b46404a@sentry.dc-wifi.tech/6"
+      VUE_APP_PAYZEN_PUBLIC_KEY: "16089380:publickey_XE7UuvgIGDPwX1Jah5gyAjAqtIkF2UIb5Vcet7R4cRsRB"
+      VUE_APP_ENVIRONMENT: "production"
+      VUE_APP_GTM: "GTM-TKQN7D"
+
+  ## Pas de limite CPU pour éviter latence
+  Resources:
+    Enable: true
+    Limits:
+      # cpu: ""
+      Memory: "500Mi"
+    Requests:
+      Cpu: "0.1"
+      Memory: "50Mi"
+
+ConfigEnv:
+  Path: "/usr/share/nginx/html/config.js"
+
+Ingress:
+  Class: "nginx"
+  Host: "www.dc-wifi.tech"
+  ## Garder le subpath sans le / à la fin ( pour le configmap-nginx-conf)
+  ## penser à ajouter  le / dans l'ingress ou quand nécessaire.
+  SubPath: "/portails/accor"
+
+  ## En activant tls l'ingress ecoute aussi bien sur 80 que 443
+  Tls:
+    Enable: true
+    SecretName: "letsencrypt-sec-prod"
+    ## c'est le 1er deploiement dans la prod il faut le ClusterIssuer
+    ClusterIssuer: "letsencrypt-prod"
+
+## Volume NFS pour montage des sources dans le pod pour le déploiement DEV
+Nfs:
+  MountSource: false
+  # Server: ""
+  # Export: ""
+  # Path: ""

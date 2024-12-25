@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    ## wifi-v5-portail-accor
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: init-vue
+    app.kubernetes.io/component: init-vue
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      name: http
+  selector:
+    pod: {{ .Release.Name }}

@@ -1,0 +1,114 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nginx-conf
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: init-vue
+    app.kubernetes.io/component: init-vue
+data:
+  nginx.conf: |
+    # Daemon lancé avec le user nginx (non root)
+    user nginx;
+
+    # Log des erreurs de niveau au moins warning
+    # /var/log/nginx/error.log est redirigé vers stderr dans l'image docker
+    error_log /var/log/nginx/error.log warn;
+
+    # Enregistrement du process ID du daemon
+    pid /var/run/nginx.pid;
+
+    # Un seul worker
+    worker_processes 1;
+    # Et 1024 connexions maximum par worker
+    events {
+      worker_connections 1024;
+    }
+
+    # Configuration HTTP
+    http {
+
+      # Liste des types MIME a associer aux extensions des fichiers
+      include /etc/nginx/mime.types;
+      # Type MIME renvoyé par défaut si l'extension est inconnue
+      default_type application/octet-stream;
+
+      # Définition du format de log des requêtes nommé "main"
+      log_format main  '$remote_addr - $remote_user [$time_local] "$request" '
+              '$status $body_bytes_sent "$http_referer" '
+              '"$http_user_agent" "$http_x_forwarded_for"';
+      # Log des requêtes avec le format main défini ci-dessus
+      # /var/log/nginx/access.log est redirigé vers stdout dans l'image docker
+      access_log /var/log/nginx/access.log main;
+
+      # Optimisations pour les fichiers statiques
+      # https://docs.nginx.com/nginx/admin-guide/web-server/serving-static-content/
+      sendfile on;
+      sendfile_max_chunk 1m;
+      tcp_nopush on;
+      tcp_nodelay on;
+
+      # Limite les connexions "keepalive" à 30 secondes
+      keepalive_timeout 30;
+
+      map $sent_http_content_type $caching_rules {
+            # Fichiers html (5 min)
+    		text/html						300;
+
+            # Fichiers css, js, json (15 min)
+    		text/css						900;
+    		application/javascript			900;
+    		application/json				900;
+
+    		# images (1 heure)
+    		~image/							3600;
+
+    		# Fichiers pour les polices (1 jour)
+    		~font/						    86400;
+    		application/vnd.ms-fontobject	86400;
+
+    		default							off;
+      }
+
+      # Définition du serveur virtuel
+      server {
+
+        # Ecoute sur le port TCP/80
+        listen 80;
+
+        # Nom du serveur
+        server_name localhost;
+
+        # Racine par défaut
+        # Cela permet aux http probes de ne pas échouer
+        # (et donc de ne pas redémarrer le pod en permanence)
+        root /usr/share/nginx/html;
+
+        # Fichier par défaut pour un répertoire
+        index index.html;
+
+        expires $caching_rules;
+
+        # L'uri complète avec le subPath est renvoyée par l'ingress
+        # optional_modifier "^~" : If a carat and tilde modifier is present,
+        # and if this block is selected as the best non-regular expression match,
+        # regular expression matching will not take place.
+        location ^~ {{ .Values.Ingress.SubPath }} {
+
+          # "alias", contrairement à "root", remplace le subPath avec le chemin spécifié
+          # ("root" ajoute le subPath au chemin spécifié)
+          alias /usr/share/nginx/html;
+
+          # Pour les applications SPA (Single Page Application)
+          # qui utilisent les "deep links" (ie. fausses URL), il est
+          # nécessaire de renvoyer les URL inexistantes vers la page
+          # hébergeant l'application.
+          # La définition ci-dessous permet de renvoyer les fichiers
+          # mais aussi les répertoires vers la page /index.html
+          # (chemin absolu, donc, à la racine) :
+          try_files $uri $uri/ /index.html;
+
+        }
+      }
+    }

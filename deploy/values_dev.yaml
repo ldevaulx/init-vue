@@ -1,0 +1,43 @@
+## Déploiement portail générique
+##
+## Surcharge de values pour déploiement DEV
+
+Ingress:
+  Class: "nginx"
+  Host: "minikube"
+  SubPath: "/init-vue"
+
+  ## En activant tls l'ingress ecoute aussi bien sur 80 que 443
+  Tls:
+    Enable: false
+
+Deployment:
+  Replica: 1
+  Strategy: Recreate
+  Image:
+    repository: "444963888884.dkr.ecr.eu-west-3.amazonaws.com/dev/build-vite-3.x"
+    tag: "v2"
+
+  Monitoring: false
+
+  Resources:
+    Enable: false
+
+  Env:
+    plain:
+      VUE_APP_API_URL: "http://minikube/api/public/"
+      VUE_APP_PAYZEN_PUBLIC_KEY: "16089380:testpublickey_CrbPhkWtFldqzVoftMn3kGdypmVh6xvw2cggPdXcPSVfL"
+      VUE_APP_ENVIRONMENT: "dev"
+      VUE_APP_SENTRY_DSN: ""
+      VUE_APP_GTM: "GTM-T8T77BTB"
+
+ConfigEnv:
+  Path: "/work/public/config.js"
+
+## Volume NFS pour montage des sources dans le pod pour le déploiement DEV
+Nfs:
+  MountSource: true
+  Server: "nfsserver"
+  Export: "/opt/passman/src/"
+  Path: "init-vue"
+  PathCommon: "init-vue"

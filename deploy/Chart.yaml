@@ -1,0 +1,11 @@
+# Version schéma helm (v2 = helm3)
+apiVersion: v2
+
+# Nom de l'application déployée
+name: init-vue
+
+# Version du chart : doit changer si l'application change ou si la configuration du chart change
+version: 4
+
+# icon (optionnel) mais génère un warning avec "helm lint"
+icon: https://helm.sh/img/helm-logo.svg

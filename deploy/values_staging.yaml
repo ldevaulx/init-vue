@@ -1,0 +1,21 @@
+## Déploiement portail générique
+##
+## Surcharge de values pour déploiement STAGING
+
+Ingress:
+  Host: "www.staging-wifi.tech"
+
+  Tls:
+    SecretName: "www-staging-wifi-tech-tls"
+    ## Le  ClusterIssuer est déjà present en staging
+    ClusterIssuer: ""
+
+Deployment:
+  Replica: 1
+  Image:
+    tag: "staging-210115104631"
+  Env:
+    plain:
+      VUE_APP_API_URL: "https://www.staging-wifi.tech/api/public/"
+      VUE_APP_PAYZEN_PUBLIC_KEY: "16089380:testpublickey_CrbPhkWtFldqzVoftMn3kGdypmVh6xvw2cggPdXcPSVfL"
+      VUE_APP_ENVIRONMENT: "staging"

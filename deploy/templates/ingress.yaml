@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.Ingress.Class }}
+    {{ if .Values.Ingress.Tls.Enable }}
+    {{ if .Values.Ingress.Tls.ClusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.Ingress.Tls.ClusterIssuer }}
+    {{ end }}
+    {{ end }}
+  labels:
+    # wifi-v5-portail-accor
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: wifipass
+    app.kubernetes.io/component: portail
+  name: {{ .Release.Name }}
+spec:
+  {{ if .Values.Ingress.Tls.Enable }}
+  tls:
+  - hosts:
+    - {{ .Values.Ingress.Host }}
+    secretName: {{ .Values.Ingress.Tls.SecretName }}
+  {{ end }}
+  rules:
+  - host: {{ .Values.Ingress.Host }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Release.Name }}
+            port:
+              number: 80
+        ## Attention rajouter le / à la fin du subpath
+        path: {{ .Values.Ingress.SubPath }}/
+        pathType: ImplementationSpecific
